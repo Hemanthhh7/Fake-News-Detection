@@ -1,5 +1,5 @@
 # ----------------------------------------------------------
-# Fake News Detection Streamlit App - FINAL VERSION
+# Fake News Detection Streamlit App - FINAL SAFE VERSION
 # ----------------------------------------------------------
 
 import pandas as pd
@@ -12,7 +12,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, accuracy_score
 import streamlit as st
 
-# Download stopwords (first run only)
+# Download stopwords on first run
 nltk.download('stopwords')
 
 # -------------------------------
@@ -34,27 +34,32 @@ true_df['label'] = 1
 # Combine both into one DataFrame
 df = pd.concat([fake_df, true_df]).reset_index(drop=True)
 
+# Drop rows where 'text' is missing
+df = df.dropna(subset=['text'])
+
 # -------------------------------
-# Text Cleaning Function
+# Text Cleaning Function (Safe)
 # -------------------------------
 stop_words = set(stopwords.words('english'))
 
 def clean_text(text):
-    text = text.lower()
+    if pd.isnull(text):
+        return ""  # handle NaN rows safely
+    text = str(text).lower()
     text = re.sub(r"http\S+|www\S+|https\S+", '', text, flags=re.MULTILINE)
     text = re.sub(r'\@w+|\#', '', text)
     text = re.sub(r'[^A-Za-z\s]', '', text)
     text_tokens = text.split()
-    filtered_words = [w for w in text_tokens if not w in stop_words]
+    filtered_words = [w for w in text_tokens if w not in stop_words]
     return ' '.join(filtered_words)
 
-# Clean all text
-df['text'] = df['text'].apply(clean_text)
+# Clean all text safely
+df['clean_text'] = df['text'].apply(clean_text)
 
 # -------------------------------
 # Feature Engineering: TF-IDF
 # -------------------------------
-X = df['text']
+X = df['clean_text']
 y = df['label']
 
 tfidf = TfidfVectorizer(max_features=5000)
